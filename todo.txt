@@ -1,0 +1,80 @@
+
+
+# 使用 private-key
+
+首次访问发送 private-key 图片，之后用 JS 特效输入 private-key ，让浏览器记住密码
+
+
+
+# 虚假的代理地址
+
+<?php
+/*
+允许使用代理的IP地址及IP地址段，格式
+
+127.0.0.1
+127.0.0.1-127.0.0.5
+127.0.0.1/255.255.255.255
+192.168.17.1/16
+189.128/11
+*/
+
+$allow_user_networks = array('127.0.0.1',);
+$user_ip = $_SERVER['REMOTE_ADDR'];
+
+
+/*****************************************************************
+* Check IP 
+******************************************************************/
+
+if ( !empty($allow_user_networks)) {
+   foreach ( $allow_user_networks as $ip ) {
+      # 单一IP的匹配
+      if ( ($pos = strspn($ip, '0123456789.')) == strlen($ip) ) {
+         if ( $_SERVER['REMOTE_ADDR'] == $ip ) {
+            $banned = true;
+            break;
+         }
+         // 否则 ，继续下一个 IP
+         continue;
+      }
+      
+      # IP 段的匹配
+      $ownLong = ip2long($_SERVER['REMOTE_ADDR']);
+      $ownBin = decbin($ownLong);
+      if ( $ip[$pos] == '/' ) {
+         list($net, $mask) = explode('/', $ip);
+         if ( ( $tmp = substr_count($net, '.') ) < 3 ) {
+            $net .= str_repeat('.0', 3-$tmp);
+         }
+         if ( strpos($mask, '.') ) {
+            $mask = substr_count(decbin(ip2long($mask)), '1');
+         }
+         if ( substr(decbin(ip2long($net)), 0, $mask) === substr($ownBin, 0, $mask) ) {
+            $banned = true;
+            break;
+         }
+      } else {
+         $from = ip2long(substr($ip, 0, $pos));
+         $to = ip2long(substr($ip, $pos+1));
+         if ( $from && $to ) {
+            if ( $ownLong >= $from && $ownLong <= $to ) {
+               $banned = true;
+               break;
+            }
+         }
+      }
+   }
+   // Is the IP address banned?
+   if ( $banned ) {
+   
+      // Send a Forbidden header
+      header('HTTP/1.0 403 Forbidden', true, 403);
+      die('<h1>Forbidden</h1><p>You are not permitted to use this service.</p>');
+   
+   }
+
+}
+echo "l";
+
+?>
